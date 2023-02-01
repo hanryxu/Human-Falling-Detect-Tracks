@@ -1,3 +1,4 @@
+# flake8: noqa
 import os
 import torch
 import numpy as np
@@ -13,8 +14,8 @@ class TSSTG(object):
         device: (str) Device to load the model on 'cpu' or 'cuda'.
     """
     def __init__(self,
-                 weight_file='./Models/TSSTG/tsstg-model.pth',
-                 device='cuda'):
+                 weight_file=None,
+                 device='cpu'):
         self.graph_args = {'strategy': 'spatial'}
         self.class_names = ['Standing', 'Walking', 'Sitting', 'Lying Down',
                             'Stand up', 'Sit down', 'Fall Down']

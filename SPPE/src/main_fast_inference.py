@@ -1,3 +1,4 @@
+# flake8: noqa
 import torch
 import torch.nn as nn
 import torch.utils.data
@@ -24,7 +25,7 @@ except AttributeError:
 
 
 class InferenNet(nn.Module):
-    def __init__(self, dataset, weights_file='./Models/sppe/fast_res101_320x256.pth'):
+    def __init__(self, dataset, weights_file='VQPy/examples/fall_detection/Models/sppe/fast_res101_320x256.pth'):
         super().__init__()
 
         self.pyranet = FastPose('resnet101').cuda()
@@ -52,7 +53,7 @@ class InferenNet(nn.Module):
 
 
 class InferenNet_fast(nn.Module):
-    def __init__(self, weights_file='./Models/sppe/fast_res101_320x256.pth'):
+    def __init__(self, weights_file='VQPy/examples/fall_detection/Models/sppe/fast_res101_320x256.pth'):
         super().__init__()
 
         self.pyranet = FastPose('resnet101').cuda()
@@ -68,7 +69,7 @@ class InferenNet_fast(nn.Module):
 
 
 class InferenNet_fastRes50(nn.Module):
-    def __init__(self, weights_file='./Models/sppe/fast_res50_256x192.pth'):
+    def __init__(self, weights_file='VQPy/examples/fall_detection/Models/sppe/fast_res50_256x192.pth'):
         super().__init__()
 
         self.pyranet = FastPose('resnet50', 17).cuda()

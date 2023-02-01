@@ -1,3 +1,4 @@
+# flake8: noqa
 # -*- coding: utf-8 -*-
 import torch
 import json
@@ -19,11 +20,10 @@ alpha = 0.1
 #pool = ThreadPool(4)
 
 
-def pose_nms(bboxes, bbox_scores, pose_preds, pose_scores):
+def pose_nms(bboxes, pose_preds, pose_scores):
     """
     Parametric Pose NMS algorithm
     bboxes:         bbox locations list (n, 4)
-    bbox_scores:    bbox scores list (n,)
     pose_preds:     pose locations list (n, 17, 2)
     pose_scores:    pose scores list    (n, 17, 1)
     """
@@ -34,7 +34,6 @@ def pose_nms(bboxes, bbox_scores, pose_preds, pose_scores):
     final_result = []
 
     ori_bboxes = bboxes.clone()
-    ori_bbox_scores = bbox_scores.clone()
     ori_pose_preds = pose_preds.clone()
     ori_pose_scores = pose_scores.clone()
 
@@ -62,8 +61,10 @@ def pose_nms(bboxes, bbox_scores, pose_preds, pose_scores):
 
         # Get numbers of match keypoints by calling PCK_match
         ref_dist = ref_dists[human_ids[pick_id]]
-        simi = get_parametric_distance(pick_id, pose_preds, pose_scores, ref_dist)
-        num_match_keypoints = PCK_match(pose_preds[pick_id], pose_preds, ref_dist)
+        simi = get_parametric_distance(
+            pick_id, pose_preds, pose_scores, ref_dist)
+        num_match_keypoints = PCK_match(
+            pose_preds[pick_id], pose_preds, ref_dist)
 
         # Delete humans who have more than matchThreds keypoints overlap and high similarity
         delete_ids = torch.from_numpy(np.arange(human_scores.shape[0]))[
@@ -71,7 +72,7 @@ def pose_nms(bboxes, bbox_scores, pose_preds, pose_scores):
 
         if delete_ids.shape[0] == 0:
             delete_ids = pick_id
-        #else:
+        # else:
         #    delete_ids = torch.from_numpy(delete_ids)
 
         merge_ids.append(human_ids[delete_ids])
@@ -79,22 +80,21 @@ def pose_nms(bboxes, bbox_scores, pose_preds, pose_scores):
         pose_scores = np.delete(pose_scores, delete_ids, axis=0)
         human_ids = np.delete(human_ids, delete_ids)
         human_scores = np.delete(human_scores, delete_ids, axis=0)
-        bbox_scores = np.delete(bbox_scores, delete_ids, axis=0)
 
     assert len(merge_ids) == len(pick)
     bboxs_pick = ori_bboxes[pick]
     preds_pick = ori_pose_preds[pick]
     scores_pick = ori_pose_scores[pick]
-    bbox_scores_pick = ori_bbox_scores[pick]
-    #final_result = pool.map(filter_result, zip(scores_pick, merge_ids, preds_pick, pick, bbox_scores_pick))
+    # final_result = pool.map(filter_result, zip(scores_pick, merge_ids, preds_pick, pick, bbox_scores_pick)) #bbox_scores removed
     #final_result = [item for item in final_result if item is not None]
 
     for j in range(len(pick)):
         ids = np.arange(pose_preds.shape[1])
         max_score = torch.max(scores_pick[j, ids, 0])
 
-        if max_score < scoreThreds:
-            continue
+        # temp disable
+        # if max_score < scoreThreds:
+        # continue
 
         # Merge poses
         merge_id = merge_ids[j]
@@ -102,25 +102,27 @@ def pose_nms(bboxes, bbox_scores, pose_preds, pose_scores):
             preds_pick[j], ori_pose_preds[merge_id], ori_pose_scores[merge_id], ref_dists[pick[j]])
 
         max_score = torch.max(merge_score[ids])
-        if max_score < scoreThreds:
-            continue
+        # if max_score < scoreThreds:
+        #     continue
 
         xmax = max(merge_pose[:, 0])
         xmin = min(merge_pose[:, 0])
         ymax = max(merge_pose[:, 1])
         ymin = min(merge_pose[:, 1])
 
-        if 1.5 ** 2 * (xmax - xmin) * (ymax - ymin) < areaThres:
-            continue
+        # if 1.5 ** 2 * (xmax - xmin) * (ymax - ymin) < areaThres:
+        #     continue
 
         final_result.append({
             'bbox': bboxs_pick[j],
-            'bbox_score': bbox_scores_pick[j],
             'keypoints': merge_pose - 0.3,
             'kp_score': merge_score,
-            'proposal_score': torch.mean(merge_score) + bbox_scores_pick[j] + 1.25 * max(merge_score)
+            'proposal_score': torch.mean(merge_score) + 1.25 * max(merge_score)
+            # was
+            # 'proposal_score': torch.mean(merge_score) + bbox_scores_pick[j] + 1.25 * max(merge_score)
+            # but not used in action estimation, so removing bbox_scores should be fine
         })
-
+        
     return final_result
 
 
@@ -195,10 +197,13 @@ def p_merge(ref_pose, cluster_preds, cluster_scores, ref_dist):
         normed_scores = cluster_joint_scores / torch.sum(cluster_joint_scores)
 
         # Merge poses by a weighted sum
-        final_pose[i, 0] = torch.dot(cluster_joint_location[:, 0], normed_scores.squeeze(-1))
-        final_pose[i, 1] = torch.dot(cluster_joint_location[:, 1], normed_scores.squeeze(-1))
+        final_pose[i, 0] = torch.dot(
+            cluster_joint_location[:, 0], normed_scores.squeeze(-1))
+        final_pose[i, 1] = torch.dot(
+            cluster_joint_location[:, 1], normed_scores.squeeze(-1))
 
-        final_score[i] = torch.dot(cluster_joint_scores.transpose(0, 1).squeeze(0), normed_scores.squeeze(-1))
+        final_score[i] = torch.dot(cluster_joint_scores.transpose(
+            0, 1).squeeze(0), normed_scores.squeeze(-1))
 
     return final_pose, final_score
 
@@ -237,7 +242,8 @@ def p_merge_fast(ref_pose, cluster_preds, cluster_scores, ref_dist):
     masked_scores = cluster_scores.mul(mask.float().unsqueeze(-1))
     normed_scores = masked_scores / torch.sum(masked_scores, dim=0)
 
-    final_pose = torch.mul(cluster_preds, normed_scores.repeat(1, 1, 2)).sum(dim=0)
+    final_pose = torch.mul(
+        cluster_preds, normed_scores.repeat(1, 1, 2)).sum(dim=0)
     final_score = torch.mul(masked_scores, normed_scores).sum(dim=0)
     return final_pose, final_score
 
@@ -262,10 +268,11 @@ def get_parametric_distance(i, all_preds, keypoint_scores, ref_dist):
     pred_scores = pred_scores.repeat(1, all_preds.shape[0]).transpose(0, 1)
 
     score_dists[mask] = torch.tanh(pred_scores[mask] / delta1) *\
-                        torch.tanh(keypoint_scores[mask] / delta1)
+        torch.tanh(keypoint_scores[mask] / delta1)
 
     point_dist = torch.exp((-1) * dist / delta2)
-    final_dist = torch.sum(score_dists, dim=1) + mu * torch.sum(point_dist, dim=1)
+    final_dist = torch.sum(score_dists, dim=1) + mu * \
+        torch.sum(point_dist, dim=1)
 
     return final_dist
 

@@ -1,6 +1,8 @@
+# flake8: noqa
 import os
 import cv2
 import torch
+import numpy as np
 
 from SPPE.src.main_fast_inference import InferenNet_fast, InferenNet_fastRes50
 from SPPE.src.utils.img import crop_dets
@@ -13,7 +15,8 @@ class SPPE_FastPose(object):
                  backbone,
                  input_height=320,
                  input_width=256,
-                 device='cuda'):
+                 device='cpu',
+                 weights_file=None):
         assert backbone in ['resnet50', 'resnet101'], '{} backbone is not support yet!'.format(backbone)
 
         self.inp_h = input_height
@@ -21,12 +24,12 @@ class SPPE_FastPose(object):
         self.device = device
 
         if backbone == 'resnet101':
-            self.model = InferenNet_fast().to(device)
+            self.model = InferenNet_fast(weights_file=weights_file).to(device)
         else:
-            self.model = InferenNet_fastRes50().to(device)
+            self.model = InferenNet_fastRes50(weights_file=weights_file).to(device)
         self.model.eval()
 
-    def predict(self, image, bboxs, bboxs_scores):
+    def predict(self, image, bboxs):
         inps, pt1, pt2 = crop_dets(image, bboxs, self.inp_h, self.inp_w)
         pose_hm = self.model(inps.to(self.device)).cpu().data
 
@@ -35,5 +38,7 @@ class SPPE_FastPose(object):
 
         xy_hm, xy_img, scores = getPrediction(pose_hm, pt1, pt2, self.inp_h, self.inp_w,
                                               pose_hm.shape[-2], pose_hm.shape[-1])
-        result = pose_nms(bboxs, bboxs_scores, xy_img, scores)
-        return result
+        results = pose_nms(bboxs, xy_img, scores)
+        ps = results[0]
+        keypoints = np.concatenate((ps['keypoints'].numpy(),ps['kp_score'].numpy()),axis=1)
+        return keypoints
