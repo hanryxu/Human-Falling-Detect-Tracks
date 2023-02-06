@@ -31,7 +31,7 @@ class InferenNet(nn.Module):
         self.pyranet = FastPose('resnet101')
         print('Loading pose model from {}'.format(weights_file))
         sys.stdout.flush()
-        self.pyranet.load_state_dict(torch.load(weights_file))
+        self.pyranet.load_state_dict(torch.load(weights_file, map_location=torch.device('cpu')))
         self.pyranet.eval()
         self.pyranet = model
 
@@ -58,7 +58,7 @@ class InferenNet_fast(nn.Module):
 
         self.pyranet = FastPose('resnet101')
         print('Loading pose model from {}'.format(weights_file))
-        self.pyranet.load_state_dict(torch.load(weights_file))
+        self.pyranet.load_state_dict(torch.load(weights_file, map_location=torch.device('cpu')))
         self.pyranet.eval()
 
     def forward(self, x):
@@ -74,7 +74,7 @@ class InferenNet_fastRes50(nn.Module):
 
         self.pyranet = FastPose('resnet50', 17)
         print('Loading pose model from {}'.format(weights_file))
-        self.pyranet.load_state_dict(torch.load(weights_file))
+        self.pyranet.load_state_dict(torch.load(weights_file, map_location=torch.device('cpu')))
         self.pyranet.eval()
 
     def forward(self, x):
